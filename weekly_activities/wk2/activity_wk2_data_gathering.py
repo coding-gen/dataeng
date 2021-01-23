@@ -156,8 +156,8 @@ for i in time_list:
 # print(time_mins)
 
 full_table_good_header['Runner_mins'] = time_mins
-# print('Average finish time column fixed:')
-# print(full_table_good_header.head())
+print('Average finish time column fixed:')
+print(full_table_good_header.head())
 	
 # percentiles
 print(full_table_good_header.describe(include=[np.number]))
@@ -168,8 +168,8 @@ rcParams['figure.figsize'] = 15, 5
 plt = full_table_good_header.boxplot(column='Runner_mins')
 print('type: ', type(plt))
 plt.grid(True, axis='y')
-plt.ylabel('Chip Time')
-plt.xticks([1], ['Runners'])
+# plt.ylabel('Chip Time')
+# plt.xticks([1], ['Runners'])
 
 """
 type:  <class 'matplotlib.axes._subplots.AxesSubplot'>
@@ -182,53 +182,15 @@ AttributeError: 'AxesSubplot' object has no attribute 'ylabel'
 # This doesn't work, likely needs Jupyter display properties
 # ([ < matplotlib.axis.XTick at 0x570dd106d8 > ], <a list of 1 Text xticklabel objects> )
 
+"""
 # This didn't look right
 x = full_table_good_header['Runner_mins']
 ax = sns.distplot(x, hist=True, kde=True, rug=False, color='m', bins=25, hist_kws={'edgecolor':'black'})
 plt.show()
+"""
+
 
 """
 /Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/seaborn/distributions.py:2557: FutureWarning: `distplot` is a deprecated function and will be removed in a future version. Please adapt your code to use either `displot` (a figure-level function with similar flexibility) or `histplot` (an axes-level function for histograms).
   warnings.warn(msg, FutureWarning)
 """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

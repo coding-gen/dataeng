@@ -1,0 +1,111 @@
+# notes.txt
+
+# gdk vm create command
+gcloud compute \
+ --project=dataeng-302207 instances create test-1 \
+ --zone=us-west1-b \
+ --machine-type=e2-medium \
+ --subnet=default \
+ --network-tier=PREMIUM \
+ --maintenance-policy=MIGRATE \
+ --service-account=1035593314255-compute@developer.gserviceaccount.com \
+ --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
+ --tags=http-server \
+ --image=ubuntu-minimal-2004-focal-v20210119a \
+ --image-project=ubuntu-os-cloud \
+ --boot-disk-size=10GB \
+ --boot-disk-type=pd-standard \
+ --boot-disk-device-name=project-part-1 \
+ --no-shielded-secure-boot \
+ --shielded-vtpm \
+ --shielded-integrity-monitoring \
+ --reservation-affinity=any
+
+$ gcloud compute instances list
+NAME    ZONE        MACHINE_TYPE  PREEMPTIBLE  INTERNAL_IP  EXTERNAL_IP   STATUS
+part-1  us-west1-b  e2-micro                   10.138.0.2   34.82.97.113  RUNNING
+test-1  us-west1-b  e2-micro                   10.138.0.3   34.105.7.243  RUNNING
+
+$ gcloud compute ssh ubuntu@part-1
+
+# kafka setup
+https://docs.google.com/document/d/1YLbH96gS0FxouzhEs_2PipSvPVxlFpzW-4l_kzW0fBk/edit#
+
+sudo apt-get install python3-pip virtualenv git vim
+
+virtualenv confluent-exercise --python=python3
+source ./confluent-exercise/bin/activate
+pip3 install confluent-kafka
+pip3 install confluent_kafka
+pip3 install avro
+
+pip3 install -r requirements.txt
+$ cat requirements.txt 
+requests
+certifi
+confluent-kafka[avro,json,protobuf]>=1.4.2
+
+# python setup
+https://docs.confluent.io/platform/current/tutorials/examples/clients/docs/python.html#setup
+
+Kafka Confluent Config
+Template configuration file for Confluent Cloud
+
+# Kafka
+# default location: $HOME/.confluent/librdkafka.config
+bootstrap.servers={{ BROKER_ENDPOINT }}
+security.protocol=SASL_SSL
+sasl.mechanisms=PLAIN
+sasl.username={{ CLUSTER_API_KEY }}
+sasl.password={{ CLUSTER_API_SECRET }}
+
+# global api key info
+bootstrap.servers = broker endpoint = pkc-lgk0v.us-west1.gcp.confluent.cloud:9092
+sasl.username = key
+sasl.password = secret
+security.protocol=SASL_SSL
+sasl.mechanisms=PLAIN
+more info: https://docs.confluent.io/cloud/current/client-apps/config-client.html
+
+# pwd
+/home/ubuntu/examples/clients/cloud/python
+
+# the local file with configuration parameters to connect to your Kafka cluster
+# topic name
+./producer.py -f $HOME/.confluent/librdkafka.config -t test1
+./consumer.py -f $HOME/.confluent/librdkafka.config -t test1
+
+Confluent Kafka Python Github: https://github.com/confluentinc/confluent-kafka-python
+API Documentation: https://docs.confluent.io/clients-confluent-kafka-python/current/index.html
+
+
+
+---
+
+https://docs.python.org/3/library/json.html#module-json
+
+>>> import json
+
+#encoding
+>>> json.dumps(['foo', {'bar': ('baz', None, 1.0, 2)}])
+'["foo", {"bar": ["baz", null, 1.0, 2]}]'
+>>> print(json.dumps({"c": 0, "b": 0, "a": 0}, sort_keys=True))
+{"a": 0, "b": 0, "c": 0}
+#compact
+>>> json.dumps([1, 2, 3, {'4': 5, '6': 7}], separators=(',', ':'))
+'[1,2,3,{"4":5,"6":7}]'
+#pretty
+>>> print(json.dumps({'4': 5, '6': 7}, sort_keys=True, indent=4))
+{
+    "4": 5,
+    "6": 7
+}
+#decoding
+>>> json.loads('["foo", {"bar":["baz", null, 1.0, 2]}]')
+['foo', {'bar': ['baz', None, 1.0, 2]}]
+>>> json.loads('"\\"foo\\bar"')
+'"foo\x08ar'
+#special encoding
+>>> import decimal
+>>> json.loads('1.1', parse_float=decimal.Decimal)
+Decimal('1.1')
