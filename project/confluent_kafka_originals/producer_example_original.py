@@ -65,13 +65,8 @@ if __name__ == '__main__':
                   .format(msg.topic(), msg.partition(), msg.offset()))
 
     for n in range(100):
-        record_key = "bob"
-        # record_value = json.dumps({'count': n})
-        file_object = open('/home/ubuntu/bcsample.json')
-        original_data = json.load(file_object)
-        for record_data in original_data:
-            record_value = json.dumps(record_data)
-        file_object.close()
+        record_key = "alice"
+        record_value = json.dumps({'count': n})
         print("Producing record: {}\t{}".format(record_key, record_value))
         producer.produce(topic, key=record_key, value=record_value, on_delivery=acked)
         # p.poll() serves delivery reports (on_delivery)

@@ -35,7 +35,6 @@ sudo apt-get install python3-pip virtualenv git vim
 
 virtualenv confluent-exercise --python=python3
 source ./confluent-exercise/bin/activate
-pip3 install confluent-kafka
 pip3 install confluent_kafka
 pip3 install avro
 

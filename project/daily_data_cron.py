@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+
+# Author: Genevieve LaLonde
+
 """
 Project Part 1 Section B Task Description
 
@@ -8,7 +12,8 @@ Project Part 1 Section B Task Description
 
 Step C
 1. Set daily job with cron: 'crontab -e' and '0 10 * * * /usr/bin/python3 /absolute/path/to/pp1-b.py'
-1b. TODO Or twice daily : adjust cron time and include time in python.
+1b. TODO Run twice daily.
+* Requires: adjust cron time and include hour in output filename.
 X. TODO Make your data pipeline reliable and tolerant of unexpected computer systems shortages and problems.
  * VM crashes
  * network failures
