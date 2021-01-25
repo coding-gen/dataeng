@@ -57,6 +57,7 @@ if __name__ == '__main__':
     consumer.subscribe([topic])
 
     # Process messages
+    # TODO switch this to append instead of overwrite
     file = open(str(date.today()) + 'consumed_BreadCrumbData' + ".json","w+")
     try:
         while True:
