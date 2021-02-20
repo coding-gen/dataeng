@@ -3,6 +3,8 @@
 
 import time
 import psycopg2
+from psycopg2 import sql
+from psycopg2.extras import execute_batch
 import argparse
 import re
 import csv
@@ -23,46 +25,46 @@ def row2vals(row):
       row[key] = 0
     row['County'] = row['County'].replace('\'','')  # eliminate quotes within literals
 
-  ret = f"""
-       {Year},                          -- Year
-       {row['CensusTract']},            -- CensusTract
-       '{row['State']}',                -- State
-       '{row['County']}',               -- County
-       {row['TotalPop']},               -- TotalPop
-       {row['Men']},                    -- Men
-       {row['Women']},                  -- Women
-       {row['Hispanic']},               -- Hispanic
-       {row['White']},                  -- White
-       {row['Black']},                  -- Black
-       {row['Native']},                 -- Native
-       {row['Asian']},                  -- Asian
-       {row['Pacific']},                -- Pacific
-       {row['Citizen']},                -- Citizen
-       {row['Income']},                 -- Income
-       {row['IncomeErr']},              -- IncomeErr
-       {row['IncomePerCap']},           -- IncomePerCap
-       {row['IncomePerCapErr']},        -- IncomePerCapErr
-       {row['Poverty']},                -- Poverty
-       {row['ChildPoverty']},           -- ChildPoverty
-       {row['Professional']},           -- Professional
-       {row['Service']},                -- Service
-       {row['Office']},                 -- Office
-       {row['Construction']},           -- Construction
-       {row['Production']},             -- Production
-       {row['Drive']},                  -- Drive
-       {row['Carpool']},                -- Carpool
-       {row['Transit']},                -- Transit
-       {row['Walk']},                   -- Walk
-       {row['OtherTransp']},            -- OtherTransp
-       {row['WorkAtHome']},             -- WorkAtHome
-       {row['MeanCommute']},            -- MeanCommute
-       {row['Employed']},               -- Employed
-       {row['PrivateWork']},            -- PrivateWork
-       {row['PublicWork']},             -- PublicWork
-       {row['SelfEmployed']},           -- SelfEmployed
-       {row['FamilyWork']},             -- FamilyWork
-       {row['Unemployment']}            -- Unemployment
-  """
+  ret = (
+       Year,                          # -- Year
+       row['CensusTract'],            # -- CensusTract
+       str(row['State']),                # -- State
+       str(row['County']),               # -- County
+       row['TotalPop'],               # -- TotalPop
+       row['Men'],                    # -- Men
+       row['Women'],                  # -- Women
+       row['Hispanic'],               # -- Hispanic
+       row['White'],                  # -- White
+       row['Black'],                  # -- Black
+       row['Native'],                 # -- Native
+       row['Asian'],                  # -- Asian
+       row['Pacific'],                # -- Pacific
+       row['Citizen'],                # -- Citizen
+       row['Income'],                 # -- Income
+       row['IncomeErr'],              # -- IncomeErr
+       row['IncomePerCap'],           # -- IncomePerCap
+       row['IncomePerCapErr'],        # -- IncomePerCapErr
+       row['Poverty'],                # -- Poverty
+       row['ChildPoverty'],           # -- ChildPoverty
+       row['Professional'],           # -- Professional
+       row['Service'],                # -- Service
+       row['Office'],                 # -- Office
+       row['Construction'],           # -- Construction
+       row['Production'],             # -- Production
+       row['Drive'],                  # -- Drive
+       row['Carpool'],                # -- Carpool
+       row['Transit'],                # -- Transit
+       row['Walk'],                   # -- Walk
+       row['OtherTransp'],            # -- OtherTransp
+       row['WorkAtHome'],             # -- WorkAtHome
+       row['MeanCommute'],            # -- MeanCommute
+       row['Employed'],               # -- Employed
+       row['PrivateWork'],            # -- PrivateWork
+       row['PublicWork'],             # -- PublicWork
+       row['SelfEmployed'],           # -- SelfEmployed
+       row['FamilyWork'],             # -- FamilyWork
+       row['Unemployment']            # -- Unemployment
+  )
   return ret
 
 
@@ -95,15 +97,6 @@ def readdata(fname):
       rowlist.append(row)
 
   return rowlist
-
-# convert list of data rows into list of SQL 'INSERT INTO ...' commands
-def getSQLcmnds(rowlist):
-  cmdlist = []
-  for row in rowlist:
-    valstr = row2vals(row)
-    cmd = f"INSERT INTO {TableName} VALUES ({valstr});"
-    cmdlist.append(cmd)
-  return cmdlist
 
 # connect to the database
 def dbconnect():
@@ -168,41 +161,44 @@ def createTable(conn):
 
     print(f"Created {TableName}")
 
-def load(conn, icmdlist):
+def load(conn, rowlist):
 
   with conn.cursor() as cursor:
-    print(f"Loading {len(icmdlist)} rows")
+    print(f"Loading {len(rowlist)} rows")
     start = time.perf_counter()
-    
-    for cmd in icmdlist:
-      # print (cmd)
-      cursor.execute(cmd)
-    
+  
+    cmd = sql.SQL("INSERT INTO CensusStaging VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);")
+
+    valstr = []
+    for row in rowlist:
+      valstr.append(row2vals(row))
+
+    execute_batch(cursor,cmd,valstr)
+
     load_time = time.perf_counter() - start
 
     cursor.execute(f"""
       INSERT INTO CensusData SELECT * FROM CensusStaging;
       DROP TABLE CensusStaging;
     """)
-    total_time = time.perf_counter() - start
-    append_time = total_time - load_time
-    print(f'Finished Loading. \n' + \
-      f'Total elapsed Time: {total_time:0.4} seconds \n' + \
-      f'Load time: {load_time:0.4} seconds \n' + \
-      f'Append and drop stage time: {append_time:0.4} seconds')
+
+  total_time = time.perf_counter() - start
+  append_time = total_time - load_time
+  print(f'Finished Loading. \n' + \
+    f'Total elapsed Time: {total_time:0.4} seconds \n' + \
+    f'Load time: {load_time:0.4} seconds \n' + \
+    f'Append and drop stage time: {append_time:0.4} seconds')
 
 
 def main():
     initialize()
     conn = dbconnect()
     rlis = readdata(Datafile)
-    cmdlist = getSQLcmnds(rlis)
 
     if CreateDB:
       createTable(conn)
 
-    load(conn, cmdlist)
-
+    load(conn, rlis)
 
 if __name__ == "__main__":
     main()
