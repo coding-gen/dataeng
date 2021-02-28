@@ -1,8 +1,0 @@
-[Unit]
-Description = kafka consumer server
-[Service]
-Type = forking
-WorkingDirectory = /home/alot4/
-ExecStart = /usr/bin/bash start.sh
-[Install]
-WantedBy = multi-user.target
