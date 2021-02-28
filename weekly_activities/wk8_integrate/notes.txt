@@ -1,0 +1,89 @@
+ubuntu@kafka-test:~/weekly_activities/integration$ head COVID_county_data.csv 
+date,county,state,fips,cases,deaths
+2020-01-21,Snohomish,Washington,53061,1,0
+2020-01-22,Snohomish,Washington,53061,1,0
+2020-01-23,Snohomish,Washington,53061,1,0
+2020-01-24,Cook,Illinois,17031,1,0
+2020-01-24,Snohomish,Washington,53061,1,0
+2020-01-25,Orange,California,06059,1,0
+2020-01-25,Cook,Illinois,17031,1,0
+2020-01-25,Snohomish,Washington,53061,1,0
+2020-01-26,Maricopa,Arizona,04013,1,0
+
+
+
+ubuntu@kafka-test:~/weekly_activities/integration$ head acs2017_census_tract_data.csv 
+TractId,State,County,TotalPop,Men,Women,Hispanic,White,Black,Native,Asian,Pacific,VotingAgeCitizen,Income,IncomeErr,IncomePerCap,IncomePerCapErr,Poverty,ChildPoverty,Professional,Service,Office,Construction,Production,Drive,Carpool,Transit,Walk,OtherTransp,WorkAtHome,MeanCommute,Employed,PrivateWork,PublicWork,SelfEmployed,FamilyWork,Unemployment
+1001020100,Alabama,Autauga County,1845,899,946,2.4,86.3,5.2,0.0,1.2,0.0,1407,67826.0,14560.0,33018.0,6294.0,10.7,20.8,38.5,15.6,22.8,10.8,12.4,94.2,3.3,0.0,0.5,0.0,2.1,24.5,881,74.2,21.2,4.5,0.0,4.6
+1001020200,Alabama,Autauga County,2172,1167,1005,1.1,41.6,54.5,0.0,1.0,0.0,1652,41287.0,3819.0,18996.0,2453.0,22.4,35.8,30.5,24.9,22.9,6.3,15.4,90.5,9.1,0.0,0.0,0.5,0.0,22.2,852,75.9,15.0,9.0,0.0,3.4
+1001020300,Alabama,Autauga County,3385,1533,1852,8.0,61.4,26.5,0.6,0.7,0.4,2480,46806.0,9496.0,21236.0,2562.0,14.7,21.1,27.9,19.4,33.3,9.9,9.6,88.3,8.4,0.0,1.0,0.8,1.5,23.1,1482,73.3,21.1,4.8,0.7,4.7
+1001020400,Alabama,Autauga County,4267,2001,2266,9.6,80.3,7.1,0.5,0.2,0.0,3257,55895.0,4369.0,28068.0,3190.0,2.3,1.7,29.0,16.6,25.8,9.1,19.5,82.3,11.2,0.0,1.5,2.9,2.1,25.9,1849,75.8,19.7,4.5,0.0,6.1
+1001020500,Alabama,Autauga County,9965,5054,4911,0.9,77.5,16.4,0.0,3.1,0.0,7229,68143.0,14424.0,36905.0,10706.0,12.2,17.9,48.8,13.8,20.5,3.5,13.4,86.9,11.2,0.0,0.8,0.3,0.7,21.0,4787,71.4,24.1,4.5,0.0,2.3
+1001020600,Alabama,Autauga County,3620,1765,1855,3.0,70.7,25.1,0.0,0.0,0.0,2687,44549.0,16126.0,27038.0,4427.0,13.6,20.2,25.2,24.6,29.0,8.1,13.1,83.0,4.8,0.0,0.7,3.5,8.0,21.1,1364,84.0,14.1,1.9,0.0,6.1
+1001020700,Alabama,Autauga County,3420,1459,1961,4.0,78.0,13.7,0.6,0.0,0.0,2538,41250.0,16811.0,19028.0,2587.0,27.0,27.7,25.4,35.0,21.6,5.6,12.4,89.0,11.0,0.0,0.0,0.0,0.0,16.4,1418,77.4,17.6,5.0,0.0,16.9
+1001020801,Alabama,Autauga County,2913,1495,1418,4.2,86.3,7.1,1.5,0.0,0.0,2163,80089.0,13397.0,36631.0,5174.0,12.0,25.1,46.0,9.1,30.6,8.3,6.0,89.5,4.6,0.0,0.0,0.7,5.2,24.6,1369,72.7,17.5,8.8,1.0,7.2
+1001020802,Alabama,Autauga County,11333,5488,5845,1.4,81.8,15.3,0.0,1.0,0.0,8248,64439.0,8677.0,26621.0,2187.0,14.7,21.8,36.8,20.2,19.6,9.3,14.0,89.1,8.7,0.0,0.0,0.0,2.2,27.4,4857,70.1,22.5,7.4,0.0,2.2
+
+
+County - name of the county
+State - name of the state in which the county resides
+TotalCases - total number of COVID cases for this county as of February 20, 2021
+Dec2020Cases - number of COVID cases recorded in this county in December of 2020
+TotalDeaths - total number of COVID deaths for this county as of February 20, 2021
+Dec2020Deaths - number of COVID deaths recorded in this county in December of 2020
+Population - population of this county
+Poverty - % of people in poverty in this county
+PerCapitaIncome - per capita personal income for this county
+
+build a pandas DataFrame that has a row per USA county
+use two different dimensions: location (as indicated by state and county) and time
+
+
+County|Municipio|Parish
+storact=> select count(*), REGEXP_REPLACE(County,'(.*) (County|Municipio|Parish)$', '\1') as County_aggregate from censusdata group by County_aggregate;
+
+ count |            county_aggregate            
+-------+-----------------------------------
+    72 | Abbeville
+   144 | Acadia
+   144 | Accomack
+   708 | Ada
+   264 | Adair
+  2232 | Adams
+   120 | Addison
+    72 | Adjuntas
+   120 | Aguada
+
+
+ count |              county               
+-------+-----------------------------------
+    48 | Abbeville
+    24 | Abbeville County
+    96 | Acadia
+    48 | Acadia Parish
+    96 | Accomack
+    48 | Accomack County
+   472 | Ada
+   236 | Ada County
+   176 | Adair
+    88 | Adair County
+  1488 | Adams
+   744 | Adams County
+    80 | Addison
+    40 | Addison County
+    48 | Adjuntas
+    24 | Adjuntas Municipio
+    80 | Aguada
+    40 | Aguada Municipio
+
+    
+County - name of the county
+State - name of the state in which the county resides
+TotalCases - total number of COVID cases for this county as of February 20, 2021
+Dec2020Cases - number of COVID cases recorded in this county in December of 2020
+TotalDeaths - total number of COVID deaths for this county as of February 20, 2021
+Dec2020Deaths - number of COVID deaths recorded in this county in December of 2020
+Population - population of this county
+Poverty - % of people in poverty in this county
+PerCapitaIncome - per capita personal income for this county
+

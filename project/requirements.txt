@@ -1,0 +1,13 @@
+# usage: pip3 install -r requirements.txt
+
+# Needed for project:
+urllib3==1.25.8
+bs4==0.0.1
+pyOpenSSL==19.0.0
+
+# Needed in general, likely also for project:
+pandas==1.2.1
+numpy==1.19.5
+matplotlib==3.3.3
+seaborn==0.11.1
+lxml==4.6.2
