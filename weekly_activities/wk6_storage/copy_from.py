@@ -112,6 +112,16 @@ def load(conn, Datafile, TableName):
       'WorkAtHome','MeanCommute','Employed','PrivateWork','PublicWork',\
       'SelfEmployed','FamilyWork','Unemployment')
     )
+    """
+    # Copy can only copy from a file or a file like object.
+    >>> f = StringIO("42\tfoo\n74\tbar\n")
+    >>> cur.copy_from(f, 'test', columns=('num', 'data'))
+
+    # Execute doesn't return records. Use fetchall for this.
+    >>> cur.execute("select * from test where id > 5;")
+    >>> cur.fetchall()
+    [(6, 42, 'foo'), (7, 74, 'bar')]
+    """
     f.close()
     total_time = time.perf_counter() - start
     print(f'Finished Loading. \n' + \

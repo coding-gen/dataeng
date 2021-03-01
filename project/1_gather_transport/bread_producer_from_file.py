@@ -6,6 +6,9 @@
 # Produce messages from stored file to kafka.
 # Flushes are batched, to speed up production.
 
+# Usage
+# python3 bread_producer_from_file.py -f ~/.confluent/librdkafka.config -t topic-test -s ./2021-01-24_BreadCrumbData.json
+
 # Copyright 2020 Confluent Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

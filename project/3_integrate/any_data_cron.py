@@ -49,10 +49,13 @@ if __name__ == '__main__':
 		page = urlopen(url)
 		text = page.read().decode("utf8")
 		page.close()
-	else:
+	elif extension == 'html':
 		soup = BeautifulSoup(urlopen(url), 'lxml')
 		text = soup.get_text()
 		extension = 'txt'
+	else:
+		soup = BeautifulSoup(urlopen(url), 'lxml')
+		text = soup.get_text()
 	dataNameList = url.split('/')
 	file = open(str(date.today()) + '_' + dataNameList[len(dataNameList)-1] + '.' + extension,"w+")
 	file.write(text)
