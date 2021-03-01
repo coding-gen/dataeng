@@ -5,6 +5,7 @@
 # Purpose
 # Produce messages directly from server to kafka.
 # Flushes are batched, to speed up production.
+# Can produce only specified count of messages, helpful for testing and development. 
 
 # With thanks to Apache Confluent Kafka Client Examples
 # URL: https://github.com/confluentinc/examples
@@ -45,14 +46,41 @@ import ccloud_lib
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 import ssl
+import argparse
 
+def parse_args():
+    """Parse command line arguments"""
+
+    parser = argparse.ArgumentParser(
+             description="Confluent Python Client example to produce messages \
+                  to Confluent Cloud")
+    parser._action_groups.pop()
+    parser.add_argument(
+        '-n', '--message-number',
+        dest='message_count',
+        help='Number of messages to upload to topic',
+        default=100000000000
+        )
+    required = parser.add_argument_group('required arguments')
+    required.add_argument('-f',
+                          dest="config_file",
+                          help="path to Confluent Cloud configuration file",
+                          required=True)
+    required.add_argument('-t',
+                          dest="topic",
+                          help="topic name",
+                          required=True)
+    args = parser.parse_args()
+
+    return args
 
 if __name__ == '__main__':
 
     # Read arguments and configurations and initialize
-    args = ccloud_lib.parse_args()
+    args = parse_args()
     config_file = args.config_file
     topic = args.topic
+    message_count = int(args.message_count)
     conf = ccloud_lib.read_ccloud_config(config_file)
 
     # Create Producer instance
@@ -81,8 +109,9 @@ if __name__ == '__main__':
             print("Failed to deliver message: {}".format(err))
         else:
             delivered_records += 1
-            print("Produced record to topic {} partition [{}] @ offset {}"
-                  .format(msg.topic(), msg.partition(), msg.offset()))
+            if delivered_records % 100 == 0:
+                print("Produced 100 records to topic {} partition [{}] @ offset {}"
+                    .format(msg.topic(), msg.partition(), msg.offset()))
 
     ssl._create_default_https_context = ssl._create_unverified_context
     url = "http://rbi.ddns.net/getBreadCrumbData"
@@ -93,6 +122,9 @@ if __name__ == '__main__':
     flushed_records=0
     record_key = "breadcrumb"
     for record_data in original_data:
+        if flushed_records >= message_count:
+            producer.flush()
+            break
         record_value = json.dumps(record_data)
         producer.produce(topic, key=record_key, value=record_value, on_delivery=acked)
         
