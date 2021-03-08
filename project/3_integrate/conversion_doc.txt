@@ -1,0 +1,66 @@
+<h1> C-Tran CAD/AVL data for 2020-10-18 </h1>
+today: date of file
+timestamp
+
+h3 trip id
+Stop Events for trip 170612619 for today
+
+
+
+table headers th
+
+vehicle_number
+leave_time
+train
+route_number
+direction
+service_key
+stop_time
+arrive_time
+dwell
+location_id
+door
+lift
+ons
+offs
+estimated_load
+maximum_speed
+train_mileage
+pattern_distance
+location_distance
+x_coordinate
+y_coordinate
+data_source
+schedule_status
+
+
+
+example values
+table data td
+
+2270
+33062
+601
+6
+0
+U
+
+33062
+0
+998
+0
+0
+0
+0
+5
+
+0.3772
+0.3498
+31.548926
+-122.69133833333333
+45.650095
+2
+2
+
+
+

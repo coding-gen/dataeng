@@ -61,3 +61,12 @@ create table BreadCrumb (
 * speed = float(VELOCITY)
 * trip_id = int(EVENT_NO_TRIP) #reference trip 
 */
+
+
+/* StopEvent to Trip column
+* 'vehicle_number' = trip_id
+* 'route_number' = route_id
+* 'vehicle_number' = vehicle_id
+* 'service_key' = service_key
+* 'direction' = direction
+*/

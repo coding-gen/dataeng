@@ -1,0 +1,139 @@
+{
+'vehicle_number': '2404',
+'leave_time': '35351',
+'train': '8003',
+'route_number': '80',
+'direction': '1',
+'service_key': 'U',
+'stop_time': '',
+'arrive_time': '35351',
+'dwell': '0',
+'location_id': '883',
+'door': '0',
+'lift': '0',
+'ons': '0',
+'offs': '0',
+'estimated_load': '1',
+'maximum_speed': '',
+'train_mileage': '8.5923',
+'pattern_distance': '8.7427',
+'location_distance': '85.365007',
+'x_coordinate': '-122.50844',
+'y_coordinate': '45.60394333333333',
+'data_source': '2',
+'schedule_status': '2',
+'date': 1603609200.0,
+'trip_id': 171152481
+}
+
+
+
+trip_id
+# CTran operates in Vancouver and Portland
+# The latitude should be between Tigard and La Center.
+# The longitude should be between Hillsboro and Sandy
+
+45.862359
+45.426648
+
+-122.938094
+-122.257624
+
+latitude of la center: 45.862359, -122.672553
+latitude of tigard: 45.426648, -122.782317
+
+
+
+longitude hillsboro: 45.524374, -122.938094
+sandy longitude: 45.396165, -122.257624
+
+'vehicle_number'
+'leave_time'
+'train'
+'route_number'
+'direction'
+'service_key'
+'stop_time'
+'arrive_time'
+'dwell'
+'location_id'
+'door'
+'lift'
+'ons'
+'offs'
+'estimated_load'
+'maximum_speed'
+'train_mileage'
+'pattern_distance'
+'location_distance'
+'x_coordinate'
+'y_coordinate'
+'data_source'
+'schedule_status'
+'date'
+'trip_id'
+
+
+ '2404',
+ '35351',
+ '8003',
+ '80',
+ '1',
+ 'U',
+ '',
+ '35351',
+ '0',
+ '883',
+ '0',
+ '0',
+ '0',
+ '0',
+ '1',
+ '',
+ '8.5923',
+ '8.7427',
+ '85.365007',
+ '-122.50844',
+ '45.60394333333333',
+ '2',
+ '2',
+ 1603609200.0,
+ 171152481
+
+
+
+'vehicle_number'
+'leave_time'
+'train'
+'route_number'
+'direction'
+'service_key'
+'stop_time'
+'arrive_time'
+'dwell'
+'location_id'
+'door'
+'lift'
+'ons'
+'offs'
+'estimated_load'
+'maximum_speed'
+'train_mileage'
+'pattern_distance'
+'location_distance'
+'x_coordinate'
+'y_coordinate'
+'data_source'
+'schedule_status'
+'date'
+'trip_id'
+
+
+'vehicle_number' = trip_id
+'route_number' = route_id
+'vehicle_number' = vehicle_id
+'service_key' = service_key
+'direction' = direction
+
+
+

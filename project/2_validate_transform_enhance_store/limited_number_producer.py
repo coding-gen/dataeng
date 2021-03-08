@@ -120,7 +120,7 @@ if __name__ == '__main__':
     original_data = json.loads(text)
 
     flushed_records=0
-    record_key = "breadcrumb"
+    record_key = "BreadCrumb"
     for record_data in original_data:
         if flushed_records >= message_count:
             producer.flush()
@@ -135,5 +135,6 @@ if __name__ == '__main__':
         if flushed_records%1800 == 0:
             producer.flush()
             
+    producer.flush()
 
     print("{} messages were produced to topic {}!".format(delivered_records, topic))

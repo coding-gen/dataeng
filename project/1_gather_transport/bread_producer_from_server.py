@@ -86,6 +86,7 @@ if __name__ == '__main__':
     original_data = json.loads(text)
 
     record_key = "breadcrumb"
+    flushed_records = 0
     for record_data in original_data:
         record_value = json.dumps(record_data)
         # print("Producing record: {}\t{}".format(record_key, record_value))
@@ -93,6 +94,9 @@ if __name__ == '__main__':
         # p.poll() serves delivery reports (on_delivery)
         # from previous produce() calls.
         producer.poll(0)
-        producer.flush()
+        flushed_records+=1
+        if flushed_records%1800 == 0:
+            producer.flush()
+
 
     print("{} messages were produced to topic {}!".format(delivered_records, topic))
