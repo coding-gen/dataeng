@@ -43,12 +43,12 @@ import re
 import csv
 import os
 
-BreadCrumbRows = []
-TripRows = set()
+EventRows = set()
+validations = {'trip_id': -1, 'vehicle_n': {}, 'aim': {}, 'service_k': {}}
 
 def initialize():
 
-    # TODO add an argument for testing, which sets to use staging tables instead.
+    # TODO add an argument for testing, which uses staging tables instead.
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--config-file", 
         dest="config_file", 
@@ -59,16 +59,6 @@ def initialize():
         default='test',
         help="topic name",
         required=True)
-    parser.add_argument("-c", "--create-tables", 
-        dest="create_tables",
-        default='True',
-        help="Creates the tables if they don't exist yet, without overwriting any existing table.",
-        action="store_false")
-    parser.add_argument("-x", "--truncate-tables", 
-        dest="truncate_tables",
-        default='False',
-        help="Truncates tables before inserting new messages.",
-        action="store_false")
     parser.add_argument("-H", "--host", 
         dest="host",
         default='127.0.0.1',
@@ -98,36 +88,6 @@ def dbconnect(host='0', db='ctran', user='vancouver', pw='washington'):
     connection.autocommit = True
     return connection
 
-def createTables(conn):
-
-  with conn.cursor() as cursor:
-    cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS Trip (
-            trip_id integer,
-            route_id integer,
-            vehicle_id integer,
-            service_key service_type,
-            direction tripdir_type,
-            PRIMARY KEY (trip_id)
-        );
-        CREATE TABLE IF NOT EXISTS BreadCrumb (
-            tstamp timestamp,
-            latitude float,
-            longitude float,
-            direction integer,
-            speed float,
-            trip_id integer,
-            FOREIGN KEY (trip_id) REFERENCES Trip
-        );
-      """)
-
-def truncateTables(conn):
-
-  with conn.cursor() as cursor:
-    cursor.execute(f"""
-        TRUNCATE TABLE BreadCrumb;
-        TRUNCATE TABLE Trip CASCADE;
-      """)
 
 def transform(row_dict):
     # Repackage values as needed for target table meaning.
@@ -135,124 +95,146 @@ def transform(row_dict):
     # Set nulls to python none type
     for key in row_dict:
         if not row_dict[key]:
-            row_dict[key] = None
+            if key in ['direction', 'x_coordinate']:
+                row_dict[key] = '0'
+            else:
+                row_dict[key] = None
 
-    # Generate a timestamp from the date and seconds offset.
-    date = datetime.strptime(row_dict['OPD_DATE'],'%d-%b-%y')
-    row_dict['TIMESTAMP'] = date + timedelta(seconds = int(row_dict['ACT_TIME']))
+    # Change direction [0,1] to ['Out','Back']
+    # TODO after the fixer is ready, set this after it.
+    switcher = {0: 'Out', 1: 'Back'}
+    row_dict['direction'] = switcher[int(row_dict['direction'])]
 
-    # Overwrite the date in correct format, to prevent need to convert it again.
-    row_dict['OPD_DATE'] = date
+    switcher = {'W': 'Weekday', 'S': 'Saturday', 'U': 'Sunday'}
+    row_dict['service_key'] = switcher[row_dict['service_key']]
 
-    # Determine if it is a weekday/weekend schedule from the date
-    days_of_week =["Weekday", "Weekday", "Weekday", "Weekday", "Weekday", "Saturday", "Sunday"]
-    row_dict['SERVICE_KEY'] = days_of_week[datetime.weekday(date)]
-
-    # Standin to determine the general out/in direction of the trip.
-    # TODO set this to default NULL instead if that works with the type.
-    row_dict['TRIP_DIRECTION'] = 'Out'
-
-    # Standin to determine the route id of the trip.
-    # TODO set this to default NULL instead if that works with the type.
-    row_dict['ROUTE_ID'] = 0
 
     return row_dict
 
 
-def validate_row(row_dict):
+def valid_row(row_dict):
     # Do some simple value checking, skip insertion for invalid values.
+    # Validate values even if they won't be inserted to the table, 
+    # because invalidity in other attributes of the record cast the whole record into doubt.
 
     # Existence Assertion
     # Each message has a trip ID and timestamp.
-    if not row_dict['EVENT_NO_TRIP']:
+    if not row_dict['trip_id']:
         return False
 
-    if not row_dict['TIMESTAMP']:
+    if not row_dict['date']:
         return False
 
     # Limit Assertions
-    # Breadcrumb Direction = ''  or between 0 and 359.
-    if row_dict['DIRECTION']:
-        int_direction = int(row_dict['DIRECTION'])
-        if int_direction > 359 or int_direction < 0:
-            return False
+    # CTran operates in Vancouver and Portland
+    # The longitude should be between Hillsboro and Sandy
+    long = float(row_dict['x_coordinate'])
+    if long < -122.938094 or long > -122.257624:
+        return False
 
-    # Speed = '' or between 0 and 200.
-    if row_dict['VELOCITY']:
-        int_speed = int(row_dict['VELOCITY'])
-        if int_speed > 200 or int_speed < 0:
-            return False
+    # The latitude should be between Tigard and La Center.
+    lat = float(row_dict['y_coordinate'])
+    if lat < 45.426648 or lat > 45.862359:
+        return False
 
     # Intra-record Assertion
-    # Generated timestamp less than 48 hours after date.
-    if (row_dict['TIMESTAMP'] - row_dict['OPD_DATE']) > timedelta(days = 2):
+    # The bus arrives at the stop before it leaves it. 
+    # At the same time is also normal, but it cannot be after.
+    if int(row_dict['arrive_time']) > int(row_dict['leave_time']):
         return False
+
+    """
+    # TODO: test this. commenting out for now
+    # TODO: add route number too
+
+    # Inter-record Assertion
+    # All records where the trip ID is the same have the same vehicle number, direction, and service key.
+    # On first occurrence of trip, set the other values.
+    if row_dict['trip_id'] != validations['trip_id']:
+        validations = {'trip_id': int(row_dict['trip_id']), \
+                        'vehicle_n': {int(row_dict['vehicle_number']): 1}, \
+                        'aim': {int(row_dict['direction']): 1}, \
+                        'service_k': {int(row_dict['service_key']): 1}}
+
+    
+    # If any of these values not in the dict already, there was an issue. Fix it.
+    # Otherwise, increment the count of times that value has been seen.
+    else:
+        if not validations['vehicle_n'][int(row_dict['vehicle_number'])]:
+            validations['vehicle_n'][int(row_dict['vehicle_number'])] = 1
+            row_dict['vehicle_number'] = fix_data(row_dict['vehicle_number'], 'vehicle_n')
+        else:
+            validations['vehicle_n'][int(row_dict['vehicle_number'])] += 1
+
+        if not validations['aim'][int(row_dict['direction'])]:
+            validations['aim'][int(row_dict['direction'])] = 1
+            row_dict['direction'] = fix_data(row_dict['direction'],'aim')
+        else:
+            validations['aim'][int(row_dict['direction'])] += 1
+
+        if not validations['service_k'][int(row_dict['service_key'])]:
+            validations['service_k'][int(row_dict['service_key'])] = 1
+            row_dict['service_key'] = fix_data(row_dict['service_k'],'service_k')
+        else:
+            validations['service_k'][int(row_dict['service_key'])] += 1
+    """
 
     return True
 
-def fix_data():
-    # if a date is very different from the rest of the dataset, adjust it
-    pass
+
+def fix_data(current_value, kind = 'vehicle_n', ):
+    # For the given attribute, return the value that has been seen more for this trip. 
+    # If it's a tie, return the same value.
+    # Maintain the type of the current value.
+    for attribute in validations[kind]:
+        if validations[kind][attribute] > validations[kind][int(current_value)]:
+            current_value = str(validations[kind][attribute])
+    return current_value
+
 
 def validate_dataset():
-    # For each trip, there is only one vehicle id 
-    # note: a vehicle ID could have multiple trips.
-
-    # Limit Assertions
-    # All values of trip_direction in {0,1}.
 
     # Summary Assertion
     # No records from the future: maximum date in the data is today.
 
-    # SERVICE_KEY should be the same for almost all the data. 
-    # Some may be on the next day (when time offset is large).
-    # fix_data()
+    # SERVICE_KEY should be the same for all the data, since it is all from the same day. 
+    # This holds, for trips that continue into the small hours. Their schedule is still for the previous day.
 
     pass
 
 def store(row_dict):
     # Prep the data for insertion in batch.
 
-    global BreadCrumbRows
-    global TripRows
+    global EventRows
 
-    BreadCrumbRows.append(
+    # Trip id is at the end for the SQL statement condition check.
+    EventRows.add(
         (
-            row_dict['TIMESTAMP'],
-            row_dict['GPS_LATITUDE'],
-            row_dict['GPS_LONGITUDE'],
-            row_dict['DIRECTION'],
-            row_dict['VELOCITY'],
-            row_dict['EVENT_NO_TRIP']
-        )
-    )
-
-    TripRows.add(
-        (
-            row_dict['EVENT_NO_TRIP'],
-            row_dict['ROUTE_ID'],
-            row_dict['VEHICLE_ID'],
-            row_dict['SERVICE_KEY'],
-            row_dict['TRIP_DIRECTION']
+            int(row_dict['route_number']),
+            int(row_dict['vehicle_number']),
+            row_dict['service_key'],
+            row_dict['direction'],
+            int(row_dict['trip_id'])
         )
     )
     return
 
 def insert(conn):
-    global BreadCrumbRows
-    global TripRows
+    global EventRows
+
+    # Convert the set of unique trips to a list for execute_batch
+    UniqueTrips = []
+    for element in EventRows:
+        UniqueTrips.append(element)
 
     with conn.cursor() as cursor:
-        bread_cmd = sql.SQL("INSERT INTO BreadCrumb VALUES (%s,%s,%s,%s,%s,%s);")
-        trip_cmd = sql.SQL("INSERT INTO Trip VALUES (%s,%s,%s,%s,%s) on conflict do nothing;")
-        execute_batch(cursor,trip_cmd,TripRows)
-        execute_batch(cursor,bread_cmd,BreadCrumbRows)
+        trip_cmd = sql.SQL("UPDATE Trip SET route_id = %s, vehicle_id = %s, service_key = %s, direction = %s WHERE trip_id = %s;")
+        execute_batch(cursor,trip_cmd,UniqueTrips)
 
     # Clear the inserted values
-    BreadCrumbRows = []
-    TripRows = set()
+    EventRows = set()
 
-def consume(conf,topic,conn):
+def consume(conf,topic,conn,db):
         # Create Consumer instance
     # 'auto.offset.reset=earliest' to start reading from the beginning of the
     #   topic if no committed offsets exist
@@ -281,9 +263,8 @@ def consume(conf,topic,conn):
             if msg is None:
                 if fail_count >= 5:
                     # Insert records from the final batch.
-                    inserted_bread_rows += len(BreadCrumbRows)
-                    inserted_trip_rows += len(TripRows)
                     insert(conn)
+                    inserted_trip_rows += len(EventRows)
                     print("No new messages in 5 seconds, closing.")
                     break
                 # No message available within timeout.
@@ -300,23 +281,22 @@ def consume(conf,topic,conn):
                 fail_count = 0 
 
                 # Parse Kafka message
-                record_key = msg.key()
-                assert msg.key() = "BreadCrumb"
+                assert msg.key().decode('UTF-8') == "StopEvent"
                 record_value = msg.value()
-                # Each row of breadcrumb data is one record value.
+                # Each row of StopEvent data is one record value.
                 row_dict = json.loads(record_value)
+                print(f"route right after load: {row_dict['route_number']}")
                 row_dict = transform(row_dict)
                 # Check if the row is valid
-                if validate_row(row_dict):
+                if valid_row(row_dict):
                     store(row_dict)
                 else:
                     skipped_rows += 1
 
-                # Insert in batches of up to 10k rows.
-                if len(BreadCrumbRows) >= 10000:
-                    inserted_bread_rows += len(BreadCrumbRows)
-                    inserted_trip_rows += len(TripRows)
+                # Insert in batches of up to 1k rows.
+                if len(EventRows) >= 1000:
                     insert(conn)
+                    inserted_trip_rows += len(EventRows)
 
                 consumed_messages += 1
 
@@ -326,28 +306,25 @@ def consume(conf,topic,conn):
         # Leave group and commit final offsets
         consumer.close()
         print(f"Consumed {consumed_messages} messages.")
-        print(f"Inserted {inserted_bread_rows} rows to `{db}.BreadCrumb`.")
         print(f"Inserted {inserted_trip_rows} unique rows to `{db}.Trip`.")
+        print(f"Updated {inserted_trip_rows} unique rows in `{db}.Trip`.")
         print(f"Skipped {skipped_rows} messages due to data validation.")
 
-if __name__ == '__main__':
-
+def main():
     args = initialize()
     topic = args.topic
     host = args.host
     db = args.db
     user = args.user
     pw = args.pw
-    create_tables = args.create_tables
-    truncate_tables = args.truncate_tables
     config_file = args.config_file
 
     conf = ccloud_lib.read_ccloud_config(config_file)
     conn = dbconnect(host,db,user,pw)
 
-    if create_tables:
-      createTables(conn)
-    if truncate_tables:
-      truncateTables(conn)
+    consume(conf,topic,conn,db)
 
-    consume(conf,topic,conn)
+
+if __name__ == '__main__':
+    main()
+
