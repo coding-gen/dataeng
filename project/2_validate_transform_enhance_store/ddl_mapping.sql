@@ -64,7 +64,7 @@ create table BreadCrumb (
 
 
 /* StopEvent to Trip column
-* 'vehicle_number' = trip_id
+* 'trip_id' = trip_id
 * 'route_number' = route_id
 * 'vehicle_number' = vehicle_id
 * 'service_key' = service_key
