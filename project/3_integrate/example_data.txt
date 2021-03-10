@@ -129,7 +129,7 @@ sandy longitude: 45.396165, -122.257624
 'trip_id'
 
 
-'vehicle_number' = trip_id
+'trip_id' = trip_id
 'route_number' = route_id
 'vehicle_number' = vehicle_id
 'service_key' = service_key

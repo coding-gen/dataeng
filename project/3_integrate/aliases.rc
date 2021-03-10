@@ -1,0 +1,8 @@
+
+alias breadp="python3 ../2_validate_transform_enhance_store/limited_number_producer.py -f ~/.confluent/librdkafka.config -t bread_event"
+alias breadc="python3 ../2_validate_transform_enhance_store/consumer_to_postgres.py -t bread_event -d ctran -u vancouver -p washington -c"
+
+alias stopp="python3 stopevent_producer.py -f ~/.confluent/librdkafka.config -t stop_event"
+alias stopc="python3 stop_event_consumer.py -t stop_event -d ctran -u vancouver -p washington"
+
+alias postg="psql -U vancouver -d ctran -h0"

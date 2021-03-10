@@ -3,7 +3,7 @@
 # Author: Genevieve LaLonde
 
 # Purpose:
-# Consume messages from kafka, validate, and insert to postgres.
+# Consume JSON BreadCrumb messages from kafka, validate, and insert to postgres.
 
 # With thanks to Apache Confluent Kafka Client Examples
 # URL: https://github.com/confluentinc/examples
@@ -50,41 +50,50 @@ def initialize():
 
     # TODO add an argument for testing, which sets to use staging tables instead.
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--config-file", 
-        dest="config_file", 
-        default=f"{os.environ['HOME']}/.confluent/librdkafka.config",
-        help="The path to the Confluent Cloud configuration file")
-    parser.add_argument("-t", "--topic-name",
-        dest="topic",
-        default='test',
-        help="topic name",
-        required=True)
     parser.add_argument("-c", "--create-tables", 
         dest="create_tables",
         default='True',
         help="Creates the tables if they don't exist yet, without overwriting any existing table.",
         action="store_false")
+    parser.add_argument("-d", "--database", 
+        dest="db",
+        default='test_db',
+        help="Database to use.")
+    parser.add_argument("-f", "--config-file", 
+        dest="config_file", 
+        default=f"{os.environ['HOME']}/.confluent/librdkafka.config",
+        help="The path to the Confluent Cloud configuration file")
+    parser.add_argument("-H", "--host", 
+        dest="host",
+        default='127.0.0.1',
+        help="The host of the database, default localhost.")
+    parser.add_argument("-p", "--password", 
+        dest="pw",
+        default='',
+        help="Password for connecting to the database.")
+    parser.add_argument("-s", "--staging",
+        dest="staging",
+        default='False',
+        help="Only load to staging tables, but don't insert to the dataset. Use for testing.",
+        action="store_true")
+    parser.add_argument("-t", "--topic-name",
+        dest="topic",
+        default='test',
+        help="topic name",
+        required=True)
+    parser.add_argument("-u", "--user", 
+        dest="user",
+        default='root',
+        help="User to connect to the database as.")
     parser.add_argument("-x", "--truncate-tables", 
         dest="truncate_tables",
         default='False',
         help="Truncates tables before inserting new messages.",
         action="store_false")
-    parser.add_argument("-H", "--host", 
-        dest="host",
-        default='127.0.0.1',
-        help="The host of the database, default localhost.")
-    parser.add_argument("-d", "--database", 
-        dest="db",
-        default='test_db',
-        help="Database to use.")
-    parser.add_argument("-u", "--user", 
-        dest="user",
-        default='root',
-        help="User to connect to the database as.")
-    parser.add_argument("-p", "--password", 
-        dest="pw",
-        default='',
-        help="Password for connecting to the database.")
+
+
+
+
     args = parser.parse_args()
     return args
 
@@ -102,7 +111,7 @@ def createTables(conn):
 
   with conn.cursor() as cursor:
     cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS Trip (
+        CREATE TEMP TABLE IF NOT EXISTS TripStaging (
             trip_id integer,
             route_id integer,
             vehicle_id integer,
@@ -110,14 +119,14 @@ def createTables(conn):
             direction tripdir_type,
             PRIMARY KEY (trip_id)
         );
-        CREATE TABLE IF NOT EXISTS BreadCrumb (
+        CREATE TEMP TABLE IF NOT EXISTS BreadCrumbStaging (
             tstamp timestamp,
             latitude float,
             longitude float,
             direction integer,
             speed float,
             trip_id integer,
-            FOREIGN KEY (trip_id) REFERENCES Trip
+            FOREIGN KEY (trip_id) REFERENCES TripStaging
         );
       """)
 
@@ -125,8 +134,8 @@ def truncateTables(conn):
 
   with conn.cursor() as cursor:
     cursor.execute(f"""
-        TRUNCATE TABLE BreadCrumb;
-        TRUNCATE TABLE Trip CASCADE;
+        TRUNCATE TABLE BreadCrumbStaging;
+        TRUNCATE TABLE TripStaging CASCADE;
       """)
 
 def transform(row_dict):
@@ -251,8 +260,8 @@ def insert(conn):
     """
 
     with conn.cursor() as cursor:
-        bread_cmd = sql.SQL("INSERT INTO BreadCrumb VALUES (%s,%s,%s,%s,%s,%s);")
-        trip_cmd = sql.SQL("INSERT INTO Trip VALUES (%s,%s,%s,%s,%s) on conflict do nothing;")
+        bread_cmd = sql.SQL("INSERT INTO BreadCrumbStaging VALUES (%s,%s,%s,%s,%s,%s);")
+        trip_cmd = sql.SQL("INSERT INTO TripStaging VALUES (%s,%s,%s,%s,%s) on conflict do nothing;")
         execute_batch(cursor,trip_cmd,TripRows)
         execute_batch(cursor,bread_cmd,BreadCrumbRows)
 
@@ -292,6 +301,15 @@ def consume(conf,topic,conn):
                     inserted_bread_rows += len(BreadCrumbRows)
                     inserted_trip_rows += len(TripRows)
                     insert(conn)
+                    # As a final action move rows to the real tables.
+                    if not staging:
+                        with conn.cursor() as cursor:
+                            cursor.execute(f"""
+                                INSERT INTO BreadCrumb SELECT * FROM BreadCrumbStaging;
+                                INSERT INTO Trip SELECT * FROM TripStaging;
+                                DROP TABLE BreadCrumbStaging;
+                                DROP TABLE TripStaging;
+                                """)
                     print("No new messages in 5 seconds, closing.")
                     break
                 # No message available within timeout.
@@ -337,10 +355,17 @@ def consume(conf,topic,conn):
     finally:
         # Leave group and commit final offsets
         consumer.close()
-        print(f"Consumed {consumed_messages} messages.")
-        print(f"Inserted {inserted_bread_rows} rows to `{db}.BreadCrumb`.")
-        print(f"Inserted {inserted_trip_rows} unique rows to `{db}.Trip`.")
-        print(f"Skipped {skipped_rows} messages due to data validation.")
+
+        if staging:
+            print(f"Consumed {consumed_messages} messages.")
+            print(f"Inserted {inserted_bread_rows} rows to `{db}.BreadCrumbStaging`.")
+            print(f"Inserted {inserted_trip_rows} unique rows to `{db}.TripStaging`.")
+            print(f"Skipped {skipped_rows} messages due to data validation.")
+        else:
+            print(f"Consumed {consumed_messages} messages.")
+            print(f"Inserted {inserted_bread_rows} rows to `{db}.BreadCrumb`.")
+            print(f"Inserted {inserted_trip_rows} unique rows to `{db}.Trip`.")
+            print(f"Skipped {skipped_rows} messages due to data validation.")
 
 if __name__ == '__main__':
 
