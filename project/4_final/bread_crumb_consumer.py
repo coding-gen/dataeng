@@ -45,24 +45,27 @@ import os
 
 BreadCrumbRows = []
 TripRows = set()
+date = datetime.strptime('2020-01-01', '%Y-%m-%d').date()
 
 def initialize():
-
-    # TODO add an argument for testing, which sets to use staging tables instead.
+    # TODO alphabetize and set required.
     parser = argparse.ArgumentParser()
+    required = parser.add_argument_group('required arguments')
+
     parser.add_argument("-c", "--create-tables", 
         dest="create_tables",
-        default='True',
+        default=True,
         help="Creates the tables if they don't exist yet, without overwriting any existing table.",
-        action="store_false")
-    parser.add_argument("-d", "--database", 
+        action="store_true")
+    required.add_argument("-d", "--database", 
         dest="db",
-        default='test_db',
-        help="Database to use.")
-    parser.add_argument("-f", "--config-file", 
+        help="Database to use.",
+        required=True)
+    required.add_argument("-f", "--config-file", 
         dest="config_file", 
         default=f"{os.environ['HOME']}/.confluent/librdkafka.config",
-        help="The path to the Confluent Cloud configuration file")
+        help="The path to the Confluent Cloud configuration file",
+        required=True)
     parser.add_argument("-H", "--host", 
         dest="host",
         default='127.0.0.1',
@@ -73,10 +76,10 @@ def initialize():
         help="Password for connecting to the database.")
     parser.add_argument("-s", "--staging",
         dest="staging",
-        default='False',
+        default=False,
         help="Only load to staging tables, but don't insert to the dataset. Use for testing.",
         action="store_true")
-    parser.add_argument("-t", "--topic-name",
+    required.add_argument("-t", "--topic-name",
         dest="topic",
         default='test',
         help="topic name",
@@ -87,12 +90,9 @@ def initialize():
         help="User to connect to the database as.")
     parser.add_argument("-x", "--truncate-tables", 
         dest="truncate_tables",
-        default='False',
+        default=False,
         help="Truncates tables before inserting new messages.",
         action="store_false")
-
-
-
 
     args = parser.parse_args()
     return args
@@ -111,7 +111,7 @@ def createTables(conn):
 
   with conn.cursor() as cursor:
     cursor.execute(f"""
-        CREATE TEMP TABLE IF NOT EXISTS TripStaging (
+        CREATE TABLE IF NOT EXISTS TripStaging (
             trip_id integer,
             route_id integer,
             vehicle_id integer,
@@ -119,7 +119,7 @@ def createTables(conn):
             direction tripdir_type,
             PRIMARY KEY (trip_id)
         );
-        CREATE TEMP TABLE IF NOT EXISTS BreadCrumbStaging (
+        CREATE TABLE IF NOT EXISTS BreadCrumbStaging (
             tstamp timestamp,
             latitude float,
             longitude float,
@@ -138,45 +138,67 @@ def truncateTables(conn):
         TRUNCATE TABLE TripStaging CASCADE;
       """)
 
+def produce_completed(date):
+    # Check if the full dataset for this date was produced. 
+    # If not, there was some issue, so skip this run.
+    # This allows messages to expire in kafka.
+    # Cron will call the produce and consume again at the next interval.
+    try:
+        log = open('breadcrumbs.log', 'r')
+    except:
+        return False
+    for line in log:
+        log_cols = line.split()
+        if log_cols[0] ==  str(date) and log_cols[2] == 'Finished':
+            log.close()
+            return True
+    log.close()
+    return False
+
+
 def transform(row_dict):
     # Repackage values as needed for target table meaning.
+    global date 
 
     # Set nulls to python none type
     for key in row_dict:
         if not row_dict[key]:
-            row_dict[key] = None
+            if key in ['GPS_LONGITUDE']:
+                row_dict[key] = '0'
+            else:
+                row_dict[key] = None
 
     # Generate a timestamp from the date and seconds offset.
-    date = datetime.strptime(row_dict['OPD_DATE'],'%d-%b-%y')
-    row_dict['TIMESTAMP'] = date + timedelta(seconds = int(row_dict['ACT_TIME']))
+    local_date = datetime.strptime(row_dict['OPD_DATE'],'%d-%b-%y')
+    date = local_date.date()
+    row_dict['TIMESTAMP'] = local_date + timedelta(seconds = int(row_dict['ACT_TIME']))
 
     # Overwrite the date in correct format, to prevent need to convert it again.
-    row_dict['OPD_DATE'] = date
+    row_dict['OPD_DATE'] = local_date
 
     # Determine if it is a weekday/weekend schedule from the date
-    days_of_week =["Weekday", "Weekday", "Weekday", "Weekday", "Weekday", "Saturday", "Sunday"]
-    row_dict['SERVICE_KEY'] = days_of_week[datetime.weekday(date)]
+    row_dict['SERVICE_KEY'] = None
 
     # Standin to determine the general out/in direction of the trip.
-    # TODO set this to default NULL instead if that works with the type.
-    row_dict['TRIP_DIRECTION'] = 'Out'
+    row_dict['TRIP_DIRECTION'] = None
 
     # Standin to determine the route id of the trip.
-    # TODO set this to default NULL instead if that works with the type.
-    row_dict['ROUTE_ID'] = 0
+    row_dict['ROUTE_ID'] = None
 
     return row_dict
 
 
-def validate_row(row_dict):
+def validate_row(row_dict,log):
     # Do some simple value checking, skip insertion for invalid values.
-
+    global date
     # Existence Assertion
     # Each message has a trip ID and timestamp.
     if not row_dict['EVENT_NO_TRIP']:
+        log.write(f'{date} Warn: Missing trip ID value in record: {row_dict}\n')
         return False
 
     if not row_dict['TIMESTAMP']:
+        log.write(f'{date} Warn: Missing timestamp value in record: {row_dict}\n')
         return False
 
     # Limit Assertions
@@ -184,17 +206,33 @@ def validate_row(row_dict):
     if row_dict['DIRECTION']:
         int_direction = int(row_dict['DIRECTION'])
         if int_direction > 359 or int_direction < 0:
+            log.write(f'{date} Warn: Invalid direction value in record: {row_dict}\n')
             return False
 
     # Speed = '' or between 0 and 200.
     if row_dict['VELOCITY']:
         int_speed = int(row_dict['VELOCITY'])
         if int_speed > 200 or int_speed < 0:
+            log.write(f'{date} Warn: Invalid velocity value in record: {row_dict}\n')
             return False
+
+    # CTran operates in Vancouver and Portland
+    # The longitude should be between Hillsboro and Sandy
+    long = float(row_dict['GPS_LONGITUDE'])
+    if long < -122.938094 or long > -122.257624:
+        log.write(f'{date} Warn: Invalid longitude value in record: {row_dict}\n')
+        return False
+
+    # The latitude should be between Tigard and La Center.
+    lat = float(row_dict['GPS_LATITUDE'])
+    if lat < 45.426648 or lat > 45.9:
+        log.write(f'{date} Warn: Invalid latitude value in record: {row_dict}\n')
+        return False
 
     # Intra-record Assertion
     # Generated timestamp less than 48 hours after date.
     if (row_dict['TIMESTAMP'] - row_dict['OPD_DATE']) > timedelta(days = 2):
+        log.write(f'{date} Warn: Invalid generated timestamp value in record: {row_dict}\n')
         return False
 
     return True
@@ -251,23 +289,20 @@ def insert(conn):
     global BreadCrumbRows
     global TripRows
 
-    """
-    # Convert the set of unique trips to a list for execute_batch
-    # TODO: this may be unnecessary, needs testing.
-    UniqueTrips = []
-    for element in EventRows:
-        UniqueTrips.append(element)
-    """
-
     with conn.cursor() as cursor:
         bread_cmd = sql.SQL("INSERT INTO BreadCrumbStaging VALUES (%s,%s,%s,%s,%s,%s);")
         trip_cmd = sql.SQL("INSERT INTO TripStaging VALUES (%s,%s,%s,%s,%s) on conflict do nothing;")
         execute_batch(cursor,trip_cmd,TripRows)
         execute_batch(cursor,bread_cmd,BreadCrumbRows)
 
+    bread_inserted = len(BreadCrumbRows)
+    trip_inserted = len(TripRows)
+
     # Clear the inserted values
     BreadCrumbRows = []
     TripRows = set()
+
+    return bread_inserted, trip_inserted
 
 def consume(conf,topic,conn):
         # Create Consumer instance
@@ -291,6 +326,7 @@ def consume(conf,topic,conn):
     skipped_rows = 0
     inserted_bread_rows = 0
     inserted_trip_rows = 0
+
     try:
         while True:
             msg = consumer.poll(1.0)
@@ -298,15 +334,15 @@ def consume(conf,topic,conn):
             if msg is None:
                 if fail_count >= 5:
                     # Insert records from the final batch.
-                    inserted_bread_rows += len(BreadCrumbRows)
-                    inserted_trip_rows += len(TripRows)
-                    insert(conn)
+                    bread_inserted, trip_inserted = insert(conn)
+                    inserted_bread_rows += bread_inserted
+                    inserted_trip_rows += trip_inserted
                     # As a final action move rows to the real tables.
                     if not staging:
                         with conn.cursor() as cursor:
                             cursor.execute(f"""
-                                INSERT INTO BreadCrumb SELECT * FROM BreadCrumbStaging;
                                 INSERT INTO Trip SELECT * FROM TripStaging;
+                                INSERT INTO BreadCrumb SELECT * FROM BreadCrumbStaging;
                                 DROP TABLE BreadCrumbStaging;
                                 DROP TABLE TripStaging;
                                 """)
@@ -326,27 +362,34 @@ def consume(conf,topic,conn):
                 fail_count = 0 
 
                 # Parse Kafka message
-                # TODO is decode necessary here if the assert comes first?
-                #assert msg.key().decode('UTF-8') == "BreadCrumb"
-
-                assert msg.key() = "BreadCrumb"
+                assert msg.key().decode('UTF-8') == "BreadCrumb"
                 record_key = msg.key()
 
                 record_value = msg.value()
                 # Each row of breadcrumb data is one record value.
                 row_dict = json.loads(record_value)
                 row_dict = transform(row_dict)
+
+                if consumed_messages == 0:
+                    global date
+                    assert produce_completed(date) or staging, \
+                    'Messages did not finish producing for this date. ' \
+                    + 'Skipping for now. To override for testing use --staging.' \
+                    'Retry at next cron interval.'
+                    log = open('breadcrumbs.log', 'a+')
+                    log.write(f'{date} Info: Start consuming BreadCrumb data.\n')
                 # Check if the row is valid
-                if validate_row(row_dict):
+                if validate_row(row_dict,log):
                     store(row_dict)
                 else:
                     skipped_rows += 1
 
                 # Insert in batches of up to 10k rows.
                 if len(BreadCrumbRows) >= 10000:
-                    inserted_bread_rows += len(BreadCrumbRows)
-                    inserted_trip_rows += len(TripRows)
-                    insert(conn)
+                    bread_inserted, trip_inserted = insert(conn)
+                    inserted_bread_rows += bread_inserted
+                    inserted_trip_rows += trip_inserted
+
 
                 consumed_messages += 1
 
@@ -355,17 +398,25 @@ def consume(conf,topic,conn):
     finally:
         # Leave group and commit final offsets
         consumer.close()
-
+        log = open('breadcrumbs.log', 'a+')
         if staging:
             print(f"Consumed {consumed_messages} messages.")
             print(f"Inserted {inserted_bread_rows} rows to `{db}.BreadCrumbStaging`.")
             print(f"Inserted {inserted_trip_rows} unique rows to `{db}.TripStaging`.")
             print(f"Skipped {skipped_rows} messages due to data validation.")
+            log.write(f'{date} Info: Inserted {inserted_bread_rows} rows to `{db}.BreadCrumbStaging`.\n')
+            log.write(f'{date} Info: Inserted {inserted_trip_rows} unique rows to `{db}.TripStaging`.\n')
+            log.write(f'{date} Info: Skipped {skipped_rows} messages due to data validation.\n')
         else:
             print(f"Consumed {consumed_messages} messages.")
             print(f"Inserted {inserted_bread_rows} rows to `{db}.BreadCrumb`.")
             print(f"Inserted {inserted_trip_rows} unique rows to `{db}.Trip`.")
             print(f"Skipped {skipped_rows} messages due to data validation.")
+            log.write(f'{date} Info: Inserted {inserted_bread_rows} rows to `{db}.BreadCrumb`.\n')
+            log.write(f'{date} Info: Inserted {inserted_trip_rows} unique rows to `{db}.Trip`.\n')
+            log.write(f'{date} Info: Skipped {skipped_rows} messages due to data validation.\n')
+        log.close()
+
 
 if __name__ == '__main__':
 
@@ -377,6 +428,9 @@ if __name__ == '__main__':
     pw = args.pw
     create_tables = args.create_tables
     truncate_tables = args.truncate_tables
+    staging = args.staging
+    if not staging:
+        truncate_tables = True
     config_file = args.config_file
 
     conf = ccloud_lib.read_ccloud_config(config_file)
@@ -384,7 +438,7 @@ if __name__ == '__main__':
 
     if create_tables:
       createTables(conn)
-    if truncate_tables:
+    if truncate_tables or not staging:
       truncateTables(conn)
-
+    
     consume(conf,topic,conn)

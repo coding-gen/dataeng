@@ -1,0 +1,151 @@
+2020-09-02 Info: Start producing BreadCrumb data.
+2020-09-02 Info: Finished producing all BreadCrumb data.
+2020-09-02 Info: Produced 376234 BreadCrumb messages.
+2020-09-02 Info: Start consuming BreadCrumb data.
+2020-09-02 Info: Inserted 376234 rows to `ctran.BreadCrumb`.
+2020-09-02 Info: Inserted 1749 unique rows to `ctran.Trip`.
+2020-09-02 Info: Skipped 0 messages due to data validation.
+2020-09-03 Info: Start producing BreadCrumb data.
+2020-09-03 Info: Finished producing all BreadCrumb data.
+2020-09-03 Info: Produced 377015 BreadCrumb messages.
+2020-09-03 Info: Start consuming BreadCrumb data.
+2020-09-03 Info: Inserted 377015 rows to `ctran.BreadCrumb`.
+2020-09-03 Info: Inserted 1727 unique rows to `ctran.Trip`.
+2020-09-03 Info: Skipped 0 messages due to data validation.
+2020-09-04 Info: Start producing BreadCrumb data.
+2020-09-04 Info: Finished producing all BreadCrumb data.
+2020-09-04 Info: Produced 358546 BreadCrumb messages.
+2020-09-04 Info: Start consuming BreadCrumb data.
+2020-09-04 Info: Inserted 358546 rows to `ctran.BreadCrumb`.
+2020-09-04 Info: Inserted 1673 unique rows to `ctran.Trip`.
+2020-09-04 Info: Skipped 0 messages due to data validation.
+2020-09-05 Info: Start producing BreadCrumb data.
+2020-09-05 Info: Finished producing all BreadCrumb data.
+2020-09-05 Info: Produced 170828 BreadCrumb messages.
+2020-09-05 Info: Start consuming BreadCrumb data.
+2020-09-05 Info: Inserted 170828 rows to `ctran.BreadCrumb`.
+2020-09-05 Info: Inserted 867 unique rows to `ctran.Trip`.
+2020-09-05 Info: Skipped 0 messages due to data validation.
+2020-09-06 Info: Start producing BreadCrumb data.
+2020-09-06 Info: Finished producing all BreadCrumb data.
+2020-09-06 Info: Produced 133973 BreadCrumb messages.
+2020-09-06 Info: Start consuming BreadCrumb data.
+2020-09-06 Info: Inserted 133973 rows to `ctran.BreadCrumb`.
+2020-09-06 Info: Inserted 712 unique rows to `ctran.Trip`.
+2020-09-06 Info: Skipped 0 messages due to data validation.
+2020-09-07 Info: Start producing BreadCrumb data.
+2020-09-07 Info: Finished producing all BreadCrumb data.
+2020-09-07 Info: Produced 133479 BreadCrumb messages.
+2020-09-07 Info: Start consuming BreadCrumb data.
+2020-09-07 Info: Inserted 133479 rows to `ctran.BreadCrumb`.
+2020-09-07 Info: Inserted 713 unique rows to `ctran.Trip`.
+2020-09-07 Info: Skipped 0 messages due to data validation.
+2020-09-08 Info: Start producing BreadCrumb data.
+2020-09-08 Info: Finished producing all BreadCrumb data.
+2020-09-08 Info: Produced 367211 BreadCrumb messages.
+2020-09-08 Info: Start consuming BreadCrumb data.
+2020-09-08 Info: Inserted 367211 rows to `ctran.BreadCrumb`.
+2020-09-08 Info: Inserted 1699 unique rows to `ctran.Trip`.
+2020-09-08 Info: Skipped 0 messages due to data validation.
+2020-09-09 Info: Start producing BreadCrumb data.
+2020-09-09 Info: Finished producing all BreadCrumb data.
+2020-09-09 Info: Produced 356602 BreadCrumb messages.
+2020-09-09 Info: Start consuming BreadCrumb data.
+2020-09-09 Info: Inserted 356602 rows to `ctran.BreadCrumb`.
+2020-09-09 Info: Inserted 1649 unique rows to `ctran.Trip`.
+2020-09-09 Info: Skipped 0 messages due to data validation.
+2020-09-10 Info: Start producing BreadCrumb data.
+2020-09-10 Info: Finished producing all BreadCrumb data.
+2020-09-10 Info: Produced 368612 BreadCrumb messages.
+2020-09-10 Info: Start consuming BreadCrumb data.
+2020-09-10 Info: Inserted 368612 rows to `ctran.BreadCrumb`.
+2020-09-10 Info: Inserted 1687 unique rows to `ctran.Trip`.
+2020-09-10 Info: Skipped 0 messages due to data validation.
+2020-09-11 Info: Start producing BreadCrumb data.
+2020-09-11 Info: Finished producing all BreadCrumb data.
+2020-09-11 Info: Produced 363246 BreadCrumb messages.
+2020-09-11 Info: Start consuming BreadCrumb data.
+2020-09-11 Info: Inserted 363246 rows to `ctran.BreadCrumb`.
+2020-09-11 Info: Inserted 1645 unique rows to `ctran.Trip`.
+2020-09-11 Info: Skipped 0 messages due to data validation.
+2020-09-13 Info: Start producing BreadCrumb data.
+2020-09-13 Info: Finished producing all BreadCrumb data.
+2020-09-13 Info: Produced 130745 BreadCrumb messages.
+2020-09-13 Info: Start consuming BreadCrumb data.
+2020-09-13 Info: Inserted 130745 rows to `ctran.BreadCrumb`.
+2020-09-13 Info: Inserted 708 unique rows to `ctran.Trip`.
+2020-09-13 Info: Skipped 0 messages due to data validation.
+2020-09-14 Info: Start producing BreadCrumb data.
+2020-09-14 Info: Finished producing all BreadCrumb data.
+2020-09-14 Info: Produced 365452 BreadCrumb messages.
+2020-09-14 Info: Start consuming BreadCrumb data.
+2020-09-14 Info: Inserted 365452 rows to `ctran.BreadCrumb`.
+2020-09-14 Info: Inserted 1745 unique rows to `ctran.Trip`.
+2020-09-14 Info: Skipped 0 messages due to data validation.
+2020-09-15 Info: Start producing BreadCrumb data.
+2020-09-15 Info: Finished producing all BreadCrumb data.
+2020-09-15 Info: Produced 355477 BreadCrumb messages.
+2020-09-15 Info: Start consuming BreadCrumb data.
+2020-09-15 Info: Inserted 355477 rows to `ctran.BreadCrumb`.
+2020-09-15 Info: Inserted 1690 unique rows to `ctran.Trip`.
+2020-09-15 Info: Skipped 0 messages due to data validation.
+2020-09-16 Info: Start producing BreadCrumb data.
+2020-09-16 Info: Finished producing all BreadCrumb data.
+2020-09-16 Info: Produced 364779 BreadCrumb messages.
+2020-09-16 Info: Start consuming BreadCrumb data.
+2020-09-16 Info: Inserted 364779 rows to `ctran.BreadCrumb`.
+2020-09-16 Info: Inserted 1703 unique rows to `ctran.Trip`.
+2020-09-16 Info: Skipped 0 messages due to data validation.
+2020-09-17 Info: Start producing BreadCrumb data.
+2020-09-17 Info: Finished producing all BreadCrumb data.
+2020-09-17 Info: Produced 366390 BreadCrumb messages.
+2020-09-17 Info: Start consuming BreadCrumb data.
+2020-09-17 Info: Inserted 366390 rows to `ctran.BreadCrumb`.
+2020-09-17 Info: Inserted 1722 unique rows to `ctran.Trip`.
+2020-09-17 Info: Skipped 0 messages due to data validation.
+2020-09-19 Info: Start producing BreadCrumb data.
+2020-09-19 Info: Finished producing all BreadCrumb data.
+2020-09-19 Info: Produced 180828 BreadCrumb messages.
+2020-09-19 Info: Start consuming BreadCrumb data.
+2020-09-19 Info: Inserted 180828 rows to `ctran.BreadCrumb`.
+2020-09-19 Info: Inserted 861 unique rows to `ctran.Trip`.
+2020-09-19 Info: Skipped 0 messages due to data validation.
+2020-09-20 Info: Start producing BreadCrumb data.
+2020-09-20 Info: Finished producing all BreadCrumb data.
+2020-09-20 Info: Produced 138082 BreadCrumb messages.
+2020-09-20 Info: Start consuming BreadCrumb data.
+2020-09-20 Info: Inserted 138082 rows to `ctran.BreadCrumb`.
+2020-09-20 Info: Inserted 716 unique rows to `ctran.Trip`.
+2020-09-20 Info: Skipped 0 messages due to data validation.
+2020-09-21 Info: Start producing BreadCrumb data.
+2020-09-21 Info: Finished producing all BreadCrumb data.
+2020-09-21 Info: Produced 387181 BreadCrumb messages.
+2020-09-21 Info: Start consuming BreadCrumb data.
+2020-09-21 Info: Inserted 387181 rows to `ctran.BreadCrumb`.
+2020-09-21 Info: Inserted 1751 unique rows to `ctran.Trip`.
+2020-09-21 Info: Skipped 0 messages due to data validation.
+2020-09-22 Info: Start producing BreadCrumb data.
+2020-09-22 Info: Finished producing all BreadCrumb data.
+2020-09-22 Info: Produced 366614 BreadCrumb messages.
+2020-09-22 Info: Inserted 0 rows to `ctran.BreadCrumb`.
+2020-09-22 Info: Inserted 0 unique rows to `ctran.Trip`.
+2020-09-22 Info: Skipped 0 messages due to data validation.
+2020-09-22 Info: Start consuming BreadCrumb data.
+2020-09-22 Info: Start consuming BreadCrumb data.
+2020-09-22 Info: Inserted 0 rows to `ctran.BreadCrumbStaging`.
+2020-09-22 Info: Inserted 0 unique rows to `ctran.TripStaging`.
+2020-09-22 Info: Skipped 365112 messages due to data validation.
+2020-01-01 Info: Inserted 0 rows to `ctran.BreadCrumbStaging`.
+2020-01-01 Info: Inserted 0 unique rows to `ctran.TripStaging`.
+2020-01-01 Info: Skipped 0 messages due to data validation.
+2020-09-22 Info: Start producing BreadCrumb data.
+2020-09-22 Info: Start producing BreadCrumb data.
+2020-09-22 Info: Produced 5 BreadCrumb messages.
+2020-09-22 Info: Start consuming BreadCrumb data.
+2020-09-22 Info: Inserted 5 rows to `ctran.BreadCrumbStaging`.
+2020-09-22 Info: Inserted 1 unique rows to `ctran.TripStaging`.
+2020-09-22 Info: Skipped 0 messages due to data validation.
+2020-01-01 Info: Inserted 0 rows to `ctran.BreadCrumbStaging`.
+2020-01-01 Info: Inserted 0 unique rows to `ctran.TripStaging`.
+2020-01-01 Info: Skipped 0 messages due to data validation.
+

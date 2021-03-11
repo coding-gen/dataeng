@@ -45,6 +45,7 @@ import os
 
 EventRows = set()
 validations = {'trip_id': -1, 'vehicle_n': {}, 'aim': {}, 'service_k': {}}
+date = datetime.strptime('2020-01-01', '%Y-%m-%d').date()
 
 def initialize():
 
@@ -75,6 +76,11 @@ def initialize():
         dest="pw",
         default='',
         help="Password for connecting to the database.")
+    parser.add_argument("-s", "--staging",
+        dest="staging",
+        default=False,
+        help="Only load to staging tables, but don't insert to the dataset. Use for testing.",
+        action="store_true")
     args = parser.parse_args()
     return args
 
@@ -108,21 +114,39 @@ def transform(row_dict):
     switcher = {'W': 'Weekday', 'S': 'Saturday', 'U': 'Sunday'}
     row_dict['service_key'] = switcher[row_dict['service_key']]
 
-
     return row_dict
 
+def produce_completed(date):
+    # Check if the full dataset for this date was produced. 
+    # If not, there was some issue, so skip this run.
+    # This allows messages to expire in kafka.
+    # Cron will call the produce and consume again at the next interval.
+    try:
+        log = open('stopevents.log', 'r')
+    except:
+        return False
+    for line in log:
+        log_cols = line.split()
+        if log_cols[0] ==  str(date) and log_cols[2] == 'Finished':
+            log.close()
+            return True
+    log.close()
+    return False
 
-def valid_row(row_dict):
+def valid_row(row_dict,log):
     # Do some simple value checking, skip insertion for invalid values.
     # Validate values even if they won't be inserted to the table, 
     # because invalidity in other attributes of the record cast the whole record into doubt.
+    global date
 
     # Existence Assertion
     # Each message has a trip ID and timestamp.
     if not row_dict['trip_id']:
+        log.write(f'{date} Warn: Missing trip ID value in record: {row_dict}\n')
         return False
 
     if not row_dict['date']:
+        log.write(f'{date} Warn: Missing date value in record: {row_dict}\n')
         return False
 
     # Limit Assertions
@@ -130,17 +154,20 @@ def valid_row(row_dict):
     # The longitude should be between Hillsboro and Sandy
     long = float(row_dict['x_coordinate'])
     if long < -122.938094 or long > -122.257624:
+        log.write(f'{date} Warn: Invalid longitude value in record: {row_dict}\n')
         return False
 
     # The latitude should be between Tigard and La Center.
     lat = float(row_dict['y_coordinate'])
-    if lat < 45.426648 or lat > 45.862359:
+    if lat < 45.426648 or lat > 45.9:
+        log.write(f'{date} Warn: Invalid latitude value in record: {row_dict}\n')
         return False
 
     # Intra-record Assertion
     # The bus arrives at the stop before it leaves it. 
     # At the same time is also normal, but it cannot be after.
     if int(row_dict['arrive_time']) > int(row_dict['leave_time']):
+        log.write(f'{date} Warn: Invalid value in record, arrival time is after leave time: {row_dict}\n')
         return False
 
     """
@@ -235,7 +262,7 @@ def insert(conn):
     # Clear the inserted values
     EventRows = set()
 
-def consume(conf,topic,conn,db):
+def consume(conf, topic, conn, db, staging):
         # Create Consumer instance
     # 'auto.offset.reset=earliest' to start reading from the beginning of the
     #   topic if no committed offsets exist
@@ -257,6 +284,7 @@ def consume(conf,topic,conn,db):
     skipped_rows = 0
     inserted_bread_rows = 0
     inserted_trip_rows = 0
+    global date
     try:
         while True:
             msg = consumer.poll(1.0)
@@ -264,8 +292,9 @@ def consume(conf,topic,conn,db):
             if msg is None:
                 if fail_count >= 5:
                     # Insert records from the final batch.
+                    se_insert = len(EventRows)
                     insert(conn)
-                    inserted_trip_rows += len(EventRows)
+                    inserted_trip_rows += se_insert
                     print("No new messages in 5 seconds, closing.")
                     break
                 # No message available within timeout.
@@ -286,18 +315,30 @@ def consume(conf,topic,conn,db):
                 record_value = msg.value()
                 # Each row of StopEvent data is one record value.
                 row_dict = json.loads(record_value)
-                print(f"route right after load: {row_dict['route_number']}")
                 row_dict = transform(row_dict)
+                date = datetime.fromtimestamp(row_dict['date']).date()
+
+                if consumed_messages == 0:
+                    assert produce_completed(date) or staging, \
+                    'Messages did not finish producing for this date. ' \
+                    + 'Skipping for now. To override for testing use --staging. ' \
+                    'Retry at next cron interval.'
+                    log = open('stopevents.log', 'a+')
+                    log.write(f'{date} Info: Start consuming BreadCrumb data.\n')
+                    # Note: this assumes all messages produced in this batch are for the same date.
+                    # This ensures we don't log too verbosely.
+
                 # Check if the row is valid
-                if valid_row(row_dict):
+                if valid_row(row_dict,log):
                     store(row_dict)
                 else:
                     skipped_rows += 1
 
                 # Insert in batches of up to 1k rows.
                 if len(EventRows) >= 1000:
+                    se_insert = len(EventRows)
                     insert(conn)
-                    inserted_trip_rows += len(EventRows)
+                    inserted_trip_rows += se_insert
 
                 consumed_messages += 1
 
@@ -307,9 +348,13 @@ def consume(conf,topic,conn,db):
         # Leave group and commit final offsets
         consumer.close()
         print(f"Consumed {consumed_messages} messages.")
-        print(f"Inserted {inserted_trip_rows} unique rows to `{db}.Trip`.")
         print(f"Updated {inserted_trip_rows} unique rows in `{db}.Trip`.")
         print(f"Skipped {skipped_rows} messages due to data validation.")
+
+        log = open('stopevents.log', 'a+')
+        log.write(f'{date} Info: Updated {inserted_trip_rows} unique rows in `{db}.Trip`.\n')
+        log.write(f'{date} Info: Skipped {skipped_rows} messages due to data validation.\n')
+        log.close()
 
 def main():
     args = initialize()
@@ -318,12 +363,13 @@ def main():
     db = args.db
     user = args.user
     pw = args.pw
+    staging = args.staging
     config_file = args.config_file
 
     conf = ccloud_lib.read_ccloud_config(config_file)
     conn = dbconnect(host,db,user,pw)
 
-    consume(conf,topic,conn,db)
+    consume(conf, topic, conn, db, staging)
 
 
 if __name__ == '__main__':
