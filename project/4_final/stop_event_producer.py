@@ -56,10 +56,22 @@ def parse_args():
              description="Produce StopEvent data messages \
                   to Confluent Cloud")
     parser.add_argument(
+        '-b', '--backup-to-file',
+        dest='backup',
+        default=False,
+        help="Also store a local backup of the data to the current directory. Ignored if ingesting from backup file already.",
+        action="store_true") 
+    parser.add_argument(
         '-n', '--message-number',
         dest='message_count',
         help='Number of messages to upload to topic',
         default=100000000000
+        )
+    parser.add_argument(
+        '-s', '--source-file',
+        dest='source',
+        default=None,
+        help='Path to source file, instead of ingesting from server.'
         )
     required = parser.add_argument_group('required arguments')
     required.add_argument("-f", "--config-file", 
@@ -115,16 +127,20 @@ def acked(err, msg):
         print("Failed to deliver message: {}".format(err))
     else:
         delivered_records += 1
-        if delivered_records % 100 == 0:
-            print("Produced 100 records to topic {} partition [{}] @ offset {}"
+        if delivered_records % 10000 == 0:
+            print("Produced 10,000 records to topic {} partition [{}] @ offset {}"
                 .format(msg.topic(), msg.partition(), msg.offset()))
 
 def main():
     # Read arguments and configurations and initialize
     args = parse_args()
-    config_file = args.config_file
-    topic = args.topic
+    # Behavior management
+    backup = args.backup
+    source = args.source
     message_count = int(args.message_count)
+    # Kafka management
+    topic = args.topic
+    config_file = args.config_file
     conf = ccloud_lib.read_ccloud_config(config_file)
 
     # Create Producer instance
@@ -141,7 +157,19 @@ def main():
 
     ssl._create_default_https_context = ssl._create_unverified_context
     url = 'http://rbi.ddns.net/getStopEvents'
-    soup = BeautifulSoup(urlopen(url), 'lxml')
+    if backup:
+        page = urlopen(url)
+        text = page.read().decode("utf8")
+        page.close()
+        file = open(str(date.today()) + '_' + 'StopEvents' + '.html',"w+")
+        file.write(text)
+        file.write('\n')
+        file.close()
+
+    if source:
+        soup = BeautifulSoup(open(source), 'lxml')
+    else:
+        soup = BeautifulSoup(urlopen(url), 'lxml')
 
     # Parse the table pieces
     timestamp = get_date(soup.find_all('h1'))
@@ -156,6 +184,15 @@ def main():
     # Produce a record with that row of data, along with the date and trip_id for that table.
     clen = len(columns)
     produced_records=0
+
+    # I will not assert that this data cannot be written several times. 
+    # It updates a table with a PK, so it doesn't hurt anything to repeat.
+    # This does consume bandwidth though. 
+    # If that's a problem, copy the assert and function from the bread producer.
+    data_date = datetime.fromtimestamp(timestamp).date()
+    log = open('stopevents.log', 'a+')
+    log.write(f'{data_date} Info: Start producing StopEvent data.\n')
+
     record_key = "StopEvent"
 
     # Iterate over all tables
@@ -191,6 +228,13 @@ def main():
                 producer.flush()
 
     producer.flush()
+
+    # Only log complete if we did the full dataset.
+    if message_count == 100000000000:
+        log.write(f'{data_date} Info: Finished producing all StopEvent data.\n')
+
+    log.write(f'{data_date} Info: Produced {delivered_records} StopEvent messages.\n')
+    log.close()
 
     print("{} messages were produced to topic {}!".format(delivered_records, topic))
 

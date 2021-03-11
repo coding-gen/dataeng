@@ -51,8 +51,8 @@ def parse_args():
     parser.add_argument(
         '-b', '--backup-to-file',
         dest='backup',
-        default='False',
-        help="Also store a local backup of the data. Ignored if ingesting from backup file already.",
+        default=False,
+        help="Also store a local backup of the data to the current directory. Ignored if ingesting from backup file already.",
         action="store_true") 
     parser.add_argument(
         '--force',
@@ -88,7 +88,7 @@ def parse_args():
 def ingested(date):
     # Check if data for this date has already been ingested, as per the log. 
     try:
-        log = open('producer.log', 'r')
+        log = open('breadcrumbs.log', 'r')
     except:
         return False
     for line in log:
@@ -137,8 +137,8 @@ if __name__ == '__main__':
             print("Failed to deliver message: {}".format(err))
         else:
             delivered_records += 1
-            if delivered_records % 100 == 0:
-                print("Produced 100 records to topic {} partition [{}] @ offset {}"
+            if delivered_records % 100000 == 0:
+                print("Produced 100,000 records to topic {} partition [{}] @ offset {}"
                     .format(msg.topic(), msg.partition(), msg.offset()))
     if source:
         file_object = open(source)
@@ -156,16 +156,16 @@ if __name__ == '__main__':
             file.write('\n')
             file.close()
 
+    #TODO should really name this something else, since date is imported too.
     date = datetime.strptime(original_data[0]['OPD_DATE'],'%d-%b-%y').date()
 
     # Don't ingest this data if we already have, unless we're forcing or testing a smaller dataset.
-    assert (force_ingest or not ingested or message_count < 100000000000), \
+    assert (force_ingest or not ingested(date) or message_count < 100000000000), \
     "This data has already been ingested, skipping.\n" \
     + "Force with --force. For testing purposes, reduce the message count."
         
-    log = open('producer.log', 'a+')
-    log.write(f'{date} Info: Start producing BreadCrumb data.')
-    log.write('\n')
+    log = open('breadcrumbs.log', 'a+')
+    log.write(f'{date} Info: Start producing BreadCrumb data.\n')
 
     record_key = "breadcrumb"
     flushed_records = 0
@@ -192,10 +192,9 @@ if __name__ == '__main__':
 
     # Only log complete if we did the full dataset.
     if message_count == 100000000000:
-        log.write(f'{date} Info: Finished producing all BreadCrumb data.')
-    else:
-        log.write(f'{date} Info: Produced {delivered_records} BreadCrumb messages.')
-    log.write('\n')
+        log.write(f'{date} Info: Finished producing all BreadCrumb data.\n')
+
+    log.write(f'{date} Info: Produced {delivered_records} BreadCrumb messages.\n')
     log.close()
 
     print("{} messages were produced to topic {}!".format(delivered_records, topic))
