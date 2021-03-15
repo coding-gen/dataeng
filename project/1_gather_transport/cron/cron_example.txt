@@ -1,0 +1,2 @@
+09 * * * * /usr/bin/python3 /home/dataeng/any_data_cron.py -u http://rbi.ddns.net/getBreadCrumbData -x json
+10 * * * * /usr/bin/python3 /home/dataeng/any_data_cron.py -u http://rbi.ddns.net/getStopEvents -r

@@ -143,7 +143,6 @@ if __name__ == '__main__':
     if source:
         file_object = open(source)
         original_data = json.load(file_object)
-
     else:
         ssl._create_default_https_context = ssl._create_unverified_context
         url = "http://rbi.ddns.net/getBreadCrumbData"

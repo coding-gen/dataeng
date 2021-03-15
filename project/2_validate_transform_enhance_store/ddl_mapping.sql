@@ -1,3 +1,6 @@
+
+
+
 drop table if exists BreadCrumb;
 drop table if exists Trip;
 drop type if exists service_type;
@@ -24,6 +27,38 @@ create table BreadCrumb (
         trip_id integer,
         FOREIGN KEY (trip_id) REFERENCES Trip
 );
+
+
+
+ctran=> \d breadcrumb
+                        Table "public.breadcrumb"
+  Column   |            Type             | Collation | Nullable | Default 
+-----------+-----------------------------+-----------+----------+---------
+ tstamp    | timestamp without time zone |           |          | 
+ latitude  | double precision            |           |          | 
+ longitude | double precision            |           |          | 
+ direction | integer                     |           |          | 
+ speed     | double precision            |           |          | 
+ trip_id   | integer                     |           |          | 
+Foreign-key constraints:
+    "breadcrumb_trip_id_fkey" FOREIGN KEY (trip_id) REFERENCES trip(trip_id)
+
+
+ctran=> \d trip;
+                     Table "public.trip"
+   Column    |     Type     | Collation | Nullable | Default 
+-------------+--------------+-----------+----------+---------
+ trip_id     | integer      |           | not null | 
+ route_id    | integer      |           |          | 
+ vehicle_id  | integer      |           |          | 
+ service_key | service_type |           |          | 
+ direction   | tripdir_type |           |          | 
+Indexes:
+    "trip_pkey" PRIMARY KEY, btree (trip_id)
+Referenced by:
+    TABLE "breadcrumb" CONSTRAINT "breadcrumb_trip_id_fkey" FOREIGN KEY (trip_id) REFERENCES trip(trip_id)   
+
+
 
 /*
 * Example BreadCrumb:
