@@ -235,6 +235,22 @@ def validate_row(row_dict,log):
         log.write(f'{date} Warn: Invalid generated timestamp value in record: {row_dict}\n')
         return False
 
+    #Inter record assertion
+    # TODO: write: Speed should not change by more than 30 mph between records of the same trip id.
+    # requires storing previous record's speed value, for each trip id.
+    # Tradeoff: on the fly ingest check requires storage to track last seen speed per trip id. 
+    # Post load check must scan all records, which can take a lot of time. 
+    # Find out if lag window function can be used in postgres.
+
+    """
+           tstamp        | latitude  |  longitude  | direction | speed |  trip_id  
+    ---------------------+-----------+-------------+-----------+-------+-----------
+     2020-09-04 19:00:00 |  45.60513 |  -122.51028 |       284 |    11 | 167163309
+     2020-09-04 19:00:05 | 45.605228 | -122.511032 |       281 |    11 | 167163309
+     2020-09-04 19:00:10 | 45.607495 | -122.521105 |       288 |   164 | 167163309
+     2020-09-04 19:00:11 | 45.607508 | -122.521142 |       297 |     4 | 167163309
+    """
+
     return True
 
 def fix_data():

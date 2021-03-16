@@ -3,6 +3,6 @@ alias breadp="python3 /home/dataeng/dataeng/project/4_final/bread_crumb_producer
 alias breadc="python3 /home/dataeng/dataeng/project/4_final/bread_crumb_consumer.py -t bread_event -d ctran -u vancouver -p washington -c"
 
 alias stopp="python3 /home/dataeng/dataeng/project/4_final/stop_event_producer.py -f ~/.confluent/librdkafka.config -t stop_event"
-alias stopc="python3 /home/dataeng/dataeng/project/4_final/stop_event_consumer.py -f ~/.confluent/librdkafka.config -t stop_event -H 0 -d ctran -u vancouver -p washington -c"
+alias stopc="python3 /home/dataeng/dataeng/project/4_final/stop_event_consumer.py -f ~/.confluent/librdkafka.config -t stop_event -H 0 -d ctran -u vancouver -p washington"
 
 alias postg="psql -U vancouver -d ctran -h0"
